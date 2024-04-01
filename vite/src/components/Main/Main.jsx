@@ -1,45 +1,76 @@
-import React, { useRef, useState, useEffect } from 'react';
-import styled from 'styled-components';
-import socket from '../../socket';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from "react";
+import styled from "styled-components";
+import socket from "../../socket";
+import { useNavigate } from "react-router-dom";
+
+//
 
 const Main = () => {
-  
   const roomRef = useRef();
   const userRef = useRef();
   const [err, setErr] = useState(false);
-  const [errMsg, setErrMsg] = useState('');
+  const [errMsg, setErrMsg] = useState("");
+
+  let puter = window.puter;
+
+  const [username, setUserName] = useState("");
 
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("useEffect Name");
+    const getUserName = async () => {
+      console.log("getUserName");
+      const isSignedIn = puter.auth.isSignedIn();
+      if (!isSignedIn) {
+        puter.auth.signIn();
+      }
+      console.log("Signed in");
+      const theUser = await puter.auth.getUser();
+      sessionStorage.setItem("user", theUser.username);
+      console.log(theUser.username);
+      setUserName(theUser.username);
+    };
+    getUserName();
+  }, []);
 
-    socket.on('FE-error-user-exist', ({ error }) => {
+  useEffect(() => {
+    socket.on("FE-error-user-exist", ({ error }) => {
       if (!error) {
         const roomName = roomRef.current.value;
-        const userName = userRef.current.value;
+        const isSignedIn = puter.auth.isSignedIn();
+        if (!isSignedIn) {
+          puter.auth.signIn();
+        }
+        console.log("Signed in");
+        puter.auth.getUser().then((theUser) => {
+          console.log("Set session user: ", theUser.username)
+          sessionStorage.setItem("user", theUser.username);
 
-        sessionStorage.setItem('user', userName);
+        })
+
+        
         // props.history.push(`/room/${roomName}`); since we are using react-router-dom v6, we need to use the navigate function
         navigate(`/room/${roomName}`);
       } else {
         setErr(error);
-        setErrMsg('User name already exist');
+        setErrMsg("User name already exist");
       }
     });
   }, []);
 
   function clickJoin() {
     const roomName = roomRef.current.value;
-    const userName = userRef.current.value;
-    console.log('roomName: ', roomName);
-
+    const userName=username;
+    console.log("roomName: ", roomName);
+    console.log("userName: ", userName);
+    
     if (!roomName || !userName) {
       setErr(true);
-      setErrMsg('Enter Room Name or User Name');
+      setErrMsg("Enter Room Name or User Name");
     } else {
-      socket.emit('BE-check-user', { roomId: roomName, userName });
-      console.log('BE-check-user: ', { roomId: roomName, userName });
+      socket.emit("BE-check-user", { roomId: roomName, userName });
+      console.log("BE-check-user: ", { roomId: roomName, userName });
     }
   }
 
@@ -49,11 +80,7 @@ const Main = () => {
         <Label htmlFor="roomName">Room Name</Label>
         <Input type="text" id="roomName" ref={roomRef} />
       </Row>
-      <Row>
-        <Label htmlFor="userName">User Name</Label>
-        <Input type="text" id="userName" ref={userRef} />
-      </Row>
-      <JoinButton onClick={clickJoin}> Join </JoinButton>
+      <JoinButton onClick={clickJoin}> Join as {username}</JoinButton>
       {err ? <Error>{errMsg}</Error> : null}
     </MainContainer>
   );

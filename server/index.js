@@ -66,9 +66,11 @@ io.on('connection', (socket) => {
           // Add User List
           users.push({ userId: client, info: socketList[client] });
         });
+        console.log("FE-user-join");
         socket.broadcast.to(roomId).emit('FE-user-join', users);
         // io.sockets.in(roomId).emit('FE-user-join', users);
       } catch (e) {
+        console.log("FE-error-user-exist");
         io.sockets.in(roomId).emit('FE-error-user-exist', { err: true });
       }
     });
